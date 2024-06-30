@@ -88,3 +88,17 @@ class Post(PublishedModel):
 
     def __str__(self):
         return self.title[:TITLE_MAX_CHARS]
+    
+
+class Comment(models.Model):
+    text = models.TextField('Текст комментария')
+    related_post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='comments',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    author = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ('created_at',) 
