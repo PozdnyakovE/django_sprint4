@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 
+from .validators import real_date
+
 
 User = get_user_model()
 TITLE_MAX_LENGTH = 256
@@ -57,6 +59,7 @@ class Post(PublishedModel):
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
         verbose_name='Дата и время публикации',
+        validators=(real_date,),
         help_text=(
             'Если установить дату и время в '
             'будущем — можно делать отложенные публикации.')
@@ -81,6 +84,7 @@ class Post(PublishedModel):
         related_name='posts',
         verbose_name='Категория'
     )
+    image = models.ImageField('Изображение', upload_to='posts_images', blank=True)
 
     class Meta:
         verbose_name = 'публикация'
@@ -92,7 +96,7 @@ class Post(PublishedModel):
 
 class Comment(models.Model):
     text = models.TextField('Текст комментария')
-    related_post = models.ForeignKey(
+    post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
         related_name='comments',

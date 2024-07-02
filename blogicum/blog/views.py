@@ -1,7 +1,10 @@
+from datetime import date
+from itertools import count
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
+from django.db.models import Count
 from django.db.models.base import Model as Model
 from django.db.models.query import QuerySet
 from django.shortcuts import get_list_or_404, get_object_or_404, render
@@ -9,7 +12,7 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.list import MultipleObjectMixin
 
-from .forms import CommentForm, UserUpdateForm
+from .forms import CommentForm, PostForm, UserUpdateForm
 from .models import Category, Comment, Post
 from .utils import get_post_list
 
@@ -34,7 +37,7 @@ class PostsListView(ListView):
     paginate_by = MAX_POSTS_ON_MAIN
 
     def get_queryset(self):
-        return Post.objects.filter(
+        return get_post_list().filter(
             category__is_published=True)
 
 
@@ -114,14 +117,72 @@ class CategoryDetailView(DetailView, MultipleObjectMixin):
 #     return render(request, 'blog/category.html', context)
 
 
-class PostCreateView(CreateView):
+class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
-    fields = '__all__'
+    form_class = PostForm
     template_name = 'blog/create.html'
-    success_url = reverse_lazy('blog:index')
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        form.instance.is_published = True
+        # form.instance.pub_date = date.today()
+        return super().form_valid(form) 
+
+    def get_success_url(self):
+        return reverse_lazy(
+            'blog:profile',
+            kwargs={'username': self.request.user.username})
+    
+
+class PostUpdateView(LoginRequiredMixin, UpdateView):
+    model = Post
+    # form_class = PostForm
+    fields = ('title', 'text', 'location', 'category', 'image', )
+    template_name = 'blog/create.html'
+
+    def get_object(self):
+        return get_object_or_404(Post, pk=self.kwargs['post_id'])
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form) 
+    
+    # def get_success_url(self):
+    #     return reverse_lazy(
+    #         'blog:profile',
+    #         kwargs={'username': self.request.user.username})
+    def get_success_url(self):
+        return reverse_lazy(
+            'blog:post_detail',
+            kwargs={'post_id': self.object.pk})
+    
+
+class PostDeleteView(LoginRequiredMixin, DeleteView):
+
+    model = Post
+    # form_class = PostForm
+    template_name = 'blog/create.html'
+
+    def get_object(self):
+        return get_object_or_404(Post, pk=self.kwargs['post_id'])
+    
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form) 
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = PostForm(instance=self.object)
+        return context
+    
+    def get_success_url(self):
+        return reverse(
+            'blog:profile',
+            kwargs={'username': self.request.user.username})
 
 
-class UserDetailView(LoginRequiredMixin, DetailView, MultipleObjectMixin):
+
+class UserDetailView(DetailView, MultipleObjectMixin):
     model = UserModel
     template_name = 'blog/profile.html'
     paginate_by = MAX_POSTS_ON_MAIN
@@ -131,7 +192,7 @@ class UserDetailView(LoginRequiredMixin, DetailView, MultipleObjectMixin):
         return get_object_or_404(UserModel, username=self.kwargs['username'])
     
     def get_context_data(self, **kwargs):
-        object_list = self.object.posts.select_related('author')
+        object_list = self.object.posts.annotate(comment_count=Count('comments')).select_related('author').order_by('-pub_date')
         context = super(UserDetailView, self).get_context_data(
             object_list=object_list, **kwargs)
         return context
@@ -163,7 +224,7 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.related_post = self.related_post
+        form.instance.post = self.related_post
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -187,15 +248,9 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
             pk=self.kwargs['comment_id'],
             )
     
-    def get_context_data(self, **kwargs):
-        context = super(CommentUpdateView, self).get_context_data(**kwargs)
-        context['post_id'] = self.related_post.id
-        return context
-    
-
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.related_post = self.related_post
+        form.instance.post = self.related_post
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -221,7 +276,7 @@ class CommentDeleteView(LoginRequiredMixin, DeleteView):
     
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.related_post = self.related_post
+        form.instance.post = self.related_post
         return super().form_valid(form)
 
     def get_success_url(self):
