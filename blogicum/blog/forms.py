@@ -6,6 +6,7 @@ from .models import Comment, Post
 
 
 class CustomUserCreationForm(UserCreationForm):
+    """Форма для создания объекта пользователя."""
 
     class Meta:
         model = get_user_model()
@@ -15,9 +16,10 @@ class CustomUserCreationForm(UserCreationForm):
             'first_name',
             'last_name'
             ]
-        
+
 
 class UserUpdateForm(forms.ModelForm):
+    """Форма для редактирования данных пользователя."""
 
     class Meta:
         model = get_user_model()
@@ -27,16 +29,18 @@ class UserUpdateForm(forms.ModelForm):
             'first_name',
             'last_name'
             ]
-        
+
 
 class CommentForm(forms.ModelForm):
-    
+    """Форма для комментариев."""
+
     class Meta:
         model = Comment
         fields = ('text',) 
 
 
 class PostForm(forms.ModelForm):
+    """Форма для отображения объекта публикации."""
 
     class Meta:
         model = Post

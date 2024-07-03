@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 
 from .validators import real_date
 
@@ -84,7 +84,11 @@ class Post(PublishedModel):
         related_name='posts',
         verbose_name='Категория'
     )
-    image = models.ImageField('Изображение', upload_to='posts_images', blank=True)
+    image = models.ImageField(
+        'Изображение',
+        upload_to='posts_images',
+        blank=True
+        )
 
     class Meta:
         verbose_name = 'публикация'
@@ -92,7 +96,7 @@ class Post(PublishedModel):
 
     def __str__(self):
         return self.title[:TITLE_MAX_CHARS]
-    
+
 
 class Comment(models.Model):
     text = models.TextField('Текст комментария')
@@ -105,4 +109,4 @@ class Comment(models.Model):
     author = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
 
     class Meta:
-        ordering = ('created_at',) 
+        ordering = ('created_at',)
