@@ -1,15 +1,17 @@
 from datetime import date
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count
 from django.db.models.base import Model as Model
-from django.shortcuts import get_object_or_404
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, UpdateView)
 from django.views.generic.edit import ModelFormMixin
 from django.views.generic.list import MultipleObjectMixin
+from django.utils import timezone
 
 from .forms import CommentForm, PostForm, UserUpdateForm
 from .models import Category, Comment, Post
@@ -29,17 +31,32 @@ class PostsListView(ListView):
             category__is_published=True)
 
 
+class UnauthorizedUsers(UserPassesTestMixin):
+    def test_func(self):
+        object = self.get_object()
+        return object.author == self.request.user
+
+    def handle_no_permission(self):
+        return redirect(reverse_lazy(
+            'blog:post_detail', kwargs={'post_id': self.get_object().pk}))
+
+
 class PostObjectMixin:
     model = Post
-
-    def get_object(self):
-        return get_object_or_404(
-            Post, pk=self.kwargs['post_id'])
 
 
 class PostDetailView(PostObjectMixin, DetailView):
     template_name = 'blog/detail.html'
 
+    def get_object(self):
+        object = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        if (object.author != self.request.user):
+            if (not object.is_published or
+                    not object.category.is_published or
+                    not object.pub_date < timezone.now()):
+                raise Http404
+        return object
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
@@ -67,13 +84,15 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
 class PostDeleteUpdateMixin(PostObjectMixin):
     template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
 
     def form_valid(self, form):
         form.instance.author = self.request.user
         return super().form_valid(form)
 
 
-class PostUpdateView(PostDeleteUpdateMixin, LoginRequiredMixin, UpdateView):
+class PostUpdateView(UnauthorizedUsers, LoginRequiredMixin,
+                     PostDeleteUpdateMixin, UpdateView):
     fields = ('title', 'text', 'location', 'category', 'image', )
 
     def get_success_url(self):
@@ -82,7 +101,7 @@ class PostUpdateView(PostDeleteUpdateMixin, LoginRequiredMixin, UpdateView):
             kwargs={'post_id': self.object.pk})
 
 
-class PostDeleteView(PostDeleteUpdateMixin,
+class PostDeleteView(UnauthorizedUsers, PostDeleteUpdateMixin,
                      LoginRequiredMixin, DeleteView, ModelFormMixin):
     form_class = PostForm
 
@@ -99,7 +118,7 @@ class CategoryDetailView(DetailView, MultipleObjectMixin):
 
     def get_object(self, *args, **kwargs):
         return get_object_or_404(
-            Category, slug=self.kwargs['category_slug'])
+            Category, slug=self.kwargs['category_slug'], is_published=True)
 
     def get_context_data(self, **kwargs):
         object_list = get_post_list().filter(
@@ -174,8 +193,9 @@ class CommentUpdateDeleteMixin:
         return get_object_or_404(
             Comment,
             pk=self.kwargs['comment_id'],
+            author=self.request.user
             )
-    
+
 
 class CommentUpdateView(CommentMixin, CommentUpdateDeleteMixin,
                         LoginRequiredMixin, UpdateView):
