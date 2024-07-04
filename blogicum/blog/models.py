@@ -1,8 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from .validators import real_date
-
 
 User = get_user_model()
 TITLE_MAX_LENGTH = 256
@@ -59,7 +57,6 @@ class Post(PublishedModel):
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
         verbose_name='Дата и время публикации',
-        validators=(real_date,),
         help_text=(
             'Если установить дату и время в '
             'будущем — можно делать отложенные публикации.')
@@ -88,7 +85,7 @@ class Post(PublishedModel):
         'Изображение',
         upload_to='posts_images',
         blank=True
-        )
+    )
 
     class Meta:
         verbose_name = 'публикация'

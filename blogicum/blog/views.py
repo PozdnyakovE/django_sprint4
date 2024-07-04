@@ -3,7 +3,6 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count
-from django.db.models.base import Model as Model
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -51,12 +50,12 @@ class PostDetailView(PostObjectMixin, DetailView):
     def get_object(self):
         object = get_object_or_404(Post, pk=self.kwargs['post_id'])
         if (object.author != self.request.user):
-            if (not object.is_published or
-                    not object.category.is_published or
-                    not object.pub_date < timezone.now()):
+            if (not object.is_published
+                    or not object.category.is_published
+                    or not object.pub_date < timezone.now()):
                 raise Http404
         return object
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
@@ -194,7 +193,7 @@ class CommentUpdateDeleteMixin:
             Comment,
             pk=self.kwargs['comment_id'],
             author=self.request.user
-            )
+        )
 
 
 class CommentUpdateView(CommentMixin, CommentUpdateDeleteMixin,

@@ -15,7 +15,7 @@ class CustomUserCreationForm(UserCreationForm):
             'email',
             'first_name',
             'last_name'
-            ]
+        ]
 
 
 class UserUpdateForm(forms.ModelForm):
@@ -28,7 +28,7 @@ class UserUpdateForm(forms.ModelForm):
             'email',
             'first_name',
             'last_name'
-            ]
+        ]
 
 
 class CommentForm(forms.ModelForm):
@@ -36,7 +36,7 @@ class CommentForm(forms.ModelForm):
 
     class Meta:
         model = Comment
-        fields = ('text',) 
+        fields = ('text',)
 
 
 class PostForm(forms.ModelForm):
