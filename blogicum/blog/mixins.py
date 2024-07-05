@@ -58,3 +58,16 @@ class CommentMixin:
     def get_success_url(self):
         return reverse('blog:post_detail',
                        kwargs={'post_id': self.related_post.pk})
+
+
+class CommentUpdateDeleteMixin:
+    """Вспомогательный миксин для классов удаления, обновления комментария."""
+
+    template_name = 'blog/comment.html'
+
+    def get_object(self):
+        return get_object_or_404(
+            Comment,
+            pk=self.kwargs['comment_id'],
+            author=self.request.user
+        )

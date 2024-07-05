@@ -12,9 +12,10 @@ from django.views.generic.list import MultipleObjectMixin
 from django.utils import timezone
 
 from .forms import CommentForm, PostForm, UserUpdateForm
-from .mixins import (CommentMixin, PostDeleteUpdateMixin, ProfileUrlByUsername,
+from .mixins import (CommentMixin, CommentUpdateDeleteMixin,
+                     PostDeleteUpdateMixin, ProfileUrlByUsername,
                      UnauthorizedUsers)
-from .models import Category, Comment, Post
+from .models import Category, Post
 from .utils import get_post_list
 
 
@@ -124,17 +125,6 @@ class UserUpdateView(ProfileUrlByUsername, LoginRequiredMixin, UpdateView):
 
 class CommentCreateView(CommentMixin, LoginRequiredMixin, CreateView):
     pass
-
-
-class CommentUpdateDeleteMixin:
-    template_name = 'blog/comment.html'
-
-    def get_object(self):
-        return get_object_or_404(
-            Comment,
-            pk=self.kwargs['comment_id'],
-            author=self.request.user
-        )
 
 
 class CommentUpdateView(CommentMixin, CommentUpdateDeleteMixin,
